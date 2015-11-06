@@ -2,8 +2,3 @@ name: RoboRes
 version: ${version}
 author: robotbrain
 main: info.robotbrain.res.RoboRes
-commands:
-      res:
-               description: Manages residences
-               usage: /res ? for more help
-               permission: res.run
