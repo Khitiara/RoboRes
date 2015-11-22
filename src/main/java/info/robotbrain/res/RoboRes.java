@@ -18,7 +18,7 @@ import java.util.regex.Pattern;
 
 public class RoboRes extends JavaPlugin implements Listener
 {
-    private static Pattern resSyntax = Pattern.compile("res\\[(?<name>[a-zA-Z0-9_.]+)]"), resSyntax2 = Pattern.compile("\\./res tp (?<name>[a-zA-Z0-9_.]+)");
+    private static Pattern[] resSyntaxes = { Pattern.compile("res\\[(?<name>[a-zA-Z0-9_.]+)]"), Pattern.compile("\\./res tp (?<name>[a-zA-Z0-9_.]+)") };
 
     @Override
     public void onEnable()
@@ -35,13 +35,12 @@ public class RoboRes extends JavaPlugin implements Listener
     public void onChat(AsyncPlayerChatEvent event)
     {
         String msg = event.getMessage();
-        Matcher matcher = resSyntax.matcher(msg), matcher2 = resSyntax2.matcher(msg);
         ArrayList<String> reses = new ArrayList<String>();
-        while (matcher.find()) {
-            reses.add(matcher.group("name"));
-        }
-        while (matcher2.find()) {
-            reses.add(matcher.group("name"));
+        for (Pattern syntax : resSyntaxes) {
+            Matcher matcher = syntax.matcher(msg);
+            while (matcher.find()) {
+                reses.add(matcher.group("name"));
+            }
         }
         if (reses.size() > 0) {
             linkRes(reses);
@@ -70,17 +69,19 @@ public class RoboRes extends JavaPlugin implements Listener
     }
 
     @EventHandler
-    public void onInteract(PlayerInteractEvent event) {
-        if(event.getAction() == org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK && event.getClickedBlock().getState() instanceof Sign) {
+    public void onInteract(PlayerInteractEvent event)
+    {
+        if (event.getAction() == org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK && event.getClickedBlock().getState() instanceof Sign) {
             Sign sign = (Sign) event.getClickedBlock().getState();
-            Matcher matcher = resSyntax.matcher(sign.getLine(0));
-            if(matcher.matches()) {
-                event.getPlayer().chat("/res tp " + matcher.group("name"));
-                return;
-            }
-            matcher = resSyntax2.matcher(sign.getLine(0));
-            if(matcher.matches()) {
-                event.getPlayer().chat("/res tp " + matcher.group("name"));
+            String[] lines = sign.getLines();
+            for (String line : lines) {
+                for (Pattern resSyntax : resSyntaxes) {
+                    Matcher matcher = resSyntax.matcher(line);
+                    if (matcher.matches()) {
+                        event.getPlayer().chat("/res tp " + matcher.group("name"));
+                        return;
+                    }
+                }
             }
         }
     }
