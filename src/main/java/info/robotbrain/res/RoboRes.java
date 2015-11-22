@@ -5,9 +5,11 @@ import net.md_5.bungee.api.chat.ClickEvent.Action;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.ComponentBuilder.FormatRetention;
 import org.bukkit.Bukkit;
+import org.bukkit.block.Sign;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
@@ -16,7 +18,7 @@ import java.util.regex.Pattern;
 
 public class RoboRes extends JavaPlugin implements Listener
 {
-    private static Pattern resSyntax = Pattern.compile("res\\[(?<name>[a-zA-Z0-9_.]+)]");
+    private static Pattern resSyntax = Pattern.compile("res\\[(?<name>[a-zA-Z0-9_.]+)]"), resSyntax2 = Pattern.compile("\\./res tp (?<name>[a-zA-Z0-9_.]+)");
 
     @Override
     public void onEnable()
@@ -33,9 +35,12 @@ public class RoboRes extends JavaPlugin implements Listener
     public void onChat(AsyncPlayerChatEvent event)
     {
         String msg = event.getMessage();
-        Matcher matcher = resSyntax.matcher(msg);
+        Matcher matcher = resSyntax.matcher(msg), matcher2 = resSyntax2.matcher(msg);
         ArrayList<String> reses = new ArrayList<String>();
         while (matcher.find()) {
+            reses.add(matcher.group("name"));
+        }
+        while (matcher2.find()) {
             reses.add(matcher.group("name"));
         }
         if (reses.size() > 0) {
@@ -62,5 +67,21 @@ public class RoboRes extends JavaPlugin implements Listener
             }
         }
         getServer().spigot().broadcast(builder.create());
+    }
+
+    @EventHandler
+    public void onInteract(PlayerInteractEvent event) {
+        if(event.getAction() == org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK && event.getClickedBlock().getState() instanceof Sign) {
+            Sign sign = (Sign) event.getClickedBlock().getState();
+            Matcher matcher = resSyntax.matcher(sign.getLine(0));
+            if(matcher.matches()) {
+                event.getPlayer().chat("/res tp " + matcher.group("name"));
+                return;
+            }
+            matcher = resSyntax2.matcher(sign.getLine(0));
+            if(matcher.matches()) {
+                event.getPlayer().chat("/res tp " + matcher.group("name"));
+            }
+        }
     }
 }
