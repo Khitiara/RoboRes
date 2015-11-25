@@ -1,11 +1,13 @@
 package info.robotbrain.res;
 
+import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.ClickEvent.Action;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.ComponentBuilder.FormatRetention;
 import org.bukkit.Bukkit;
 import org.bukkit.block.Sign;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
@@ -19,6 +21,7 @@ import java.util.regex.Pattern;
 public class RoboRes extends JavaPlugin implements Listener
 {
     private static Pattern[] resSyntaxes = { Pattern.compile("res\\[(?<name>[a-zA-Z0-9_.]+)]"), Pattern.compile("\\./res tp (?<name>[a-zA-Z0-9_.]+)") };
+    private static Pattern[] warpSyntaxes = { Pattern.compile("warp\\[(?<name>[a-zA-Z0-9_]+)]") };
 
     @Override
     public void onEnable()
@@ -36,20 +39,32 @@ public class RoboRes extends JavaPlugin implements Listener
     {
         String msg = event.getMessage();
         ArrayList<String> reses = new ArrayList<String>();
-        for (Pattern syntax : resSyntaxes) {
-            Matcher matcher = syntax.matcher(msg);
-            while (matcher.find()) {
-                reses.add(matcher.group("name"));
-            }
-        }
+        find(msg, resSyntaxes, reses);
         if (reses.size() > 0) {
-            linkRes(reses);
+            link(reses, "Res", "/res tp %s");
+        }
+        ArrayList<String> warps = new ArrayList<String>();
+        find(msg, warpSyntaxes, warps);
+        if (warps.size() > 0) {
+            link(warps, "Warp", "/warp %s");
         }
     }
 
-    private void linkRes(ArrayList<String> reses)
+    private void find(String msg, Pattern[] patterns, ArrayList<String> warps)
     {
-        String text = "Res link";
+        for (Pattern syntax : patterns) {
+            Matcher matcher = syntax.matcher(msg);
+            if (matcher.matches()) {
+                while (matcher.find()) {
+                    warps.add(matcher.group("name"));
+                }
+            }
+        }
+    }
+
+    private void link(ArrayList<String> reses, String text, String command)
+    {
+        text += " link";
         if (reses.size() > 1) {
             text += "s: ";
         } else {
@@ -59,13 +74,25 @@ public class RoboRes extends JavaPlugin implements Listener
         for (int i = 0; i < reses.size(); i++) {
             String name = reses.get(i);
             builder.append(name, FormatRetention.NONE);
-            builder.bold(true);
-            builder.event(new ClickEvent(Action.RUN_COMMAND, "/res tp " + name));
+            builder.color(ChatColor.LIGHT_PURPLE);
+            builder.event(new ClickEvent(Action.RUN_COMMAND, String.format(command, name)));
             if (i + 1 < reses.size()) {
                 builder.append(", ", FormatRetention.NONE);
             }
         }
         getServer().spigot().broadcast(builder.create());
+    }
+
+    private boolean doLink(String line, Pattern[] syntaxes, Player player, String command)
+    {
+        for (Pattern resSyntax : syntaxes) {
+            Matcher matcher = resSyntax.matcher(line);
+            if (matcher.matches()) {
+                player.chat(String.format(command, matcher.group("name")));
+                return true;
+            }
+        }
+        return false;
     }
 
     @EventHandler
@@ -75,13 +102,10 @@ public class RoboRes extends JavaPlugin implements Listener
             Sign sign = (Sign) event.getClickedBlock().getState();
             String[] lines = sign.getLines();
             for (String line : lines) {
-                for (Pattern resSyntax : resSyntaxes) {
-                    Matcher matcher = resSyntax.matcher(line);
-                    if (matcher.matches()) {
-                        event.getPlayer().chat("/res tp " + matcher.group("name"));
-                        return;
-                    }
+                if (doLink(line, resSyntaxes, event.getPlayer(), "/res tp %s")) {
+                    return;
                 }
+                doLink(line, warpSyntaxes, event.getPlayer(), "/warp %s");
             }
         }
     }
